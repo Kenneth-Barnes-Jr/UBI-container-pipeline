@@ -8,3 +8,9 @@
 ---
 
 ## 📜**Project Overview**
+
+---
+
+## 🛠️**Technologies**
+
+---
