@@ -1,0 +1,72 @@
+# This is the base image that GitLab runners will use to run Docker commands
+image: docker:24.0.5
+
+# Docker-in-Docker service to allow building and pushing Docker images
+services:
+  - docker:dind
+
+# Variables to avoid repeating values
+variables:
+  DOCKER_DRIVER: overlay2                                                       # Storage driver for Docker (good performance)
+  AWS_REGION: us-east-1                                                         # AWS region
+  ECR_REPO_NAME: ubi-flask                                                      # ECR repository name
+  IMAGE_TAG_LATEST: latest                                                      # Always push a 'latest' tag
+  IMAGE_TAG_SHA: $CI_COMMIT_SHORT_SHA                                           # Also push a tag based on commit SHA
+  ECR_URI: $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO_NAME
+
+# Define the stages of the pipeline
+stages:
+  - build    # => This will build the UBI-9 + Flask image
+  - push     # => This will push the UBI-9 + Flask image to ECR
+  - deploy   # => This will deploy the UBI-9 + Flask image by updating the ECS service to use the new image
+
+# This section will run before each job
+before_script:
+  # Install necessary packages
+  - apk add --no-cache python3 py3-pip bash curl jq
+  - pip install awscli
+  
+  - echo "Logging into AWS ECR..."
+# Authenticate Docker to AWS ECR
+  - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_URI
+
+# Stage 1 | Build the UBI-9 + Flask image
+build_image:
+  stage: build
+  script:
+    - echo "Building Docker image ..."
+    # Build the image with two tags (latest + commit SHA)
+    - docker build -t $ECR_REPO_NAME:$IMAGE_TAG_LATEST -t $ECR_REPO_NAME:$IMAGE_TAG_SHA .
+    # Tag the images for ECR path so that they can be pushed to the ECR repository
+    - docker tag $ECR_REPO_NAME:$IMAGE_TAG_LATEST $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO_NAME:$IMAGE_TAG_LATEST
+    - docker tag $ECR_REPO_NAME:$IMAGE_TAG_SHA $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO_NAME:$IMAGE_TAG_SHA
+  artifacts:
+    # Optionally save a tar version of the image (debugging, local load)
+    paths:
+      - docker-image.tar
+    expire_in: 1 hour
+
+# Stage 2 | Push the UBI-9 + Flask image to ECR
+push_image:
+  stage: push
+  script:
+    - echo "Pushing Docker image to ECR..."
+    - docker push $ECR_URI:$IMAGE_TAG_LATEST
+    - docker push $ECR_URI:$IMAGE_TAG_SHA
+
+# Stage 3 | Deploy the UBI-9 + Flask image to ECS
+deploy_image:
+  stage: deploy
+  script:
+    - echo "Deploying Docker image to ECS..."
+    # Get current task definition
+    - TASK_DEF=$(aws ecs describe-services --cluster $ECS_CLUSTER_NAME --services $ECS_SERVICE_NAME --query "services[0].taskDefinition" --output text)
+    - echo "Current task definition - $TASK_DEF"
+    # Get current task definition JSON, replace image, and register new revision
+    - NEW_TASK_DEF=$(aws ecs describe-task-definition --task-definition $TASK_DEF)
+    - echo $NEW_TASK_DEF | jq --arg IMAGE "$ECR_URI:$IMAGE_TAG_LATEST" '.taskDefinition | .containerDefinitions[0].image=$IMAGE | {family, containerDefinitions}' > new-task-def.json
+    - aws ecs register-task-definition --cli-input-json file://new-task-def.json
+    # Update service to use new revision
+    - aws ecs update-service --cluster $ECS_CLUSTER_NAME --service $ECS_SERVICE_NAME --force-new-deployment
+
+    - echo "Deployment complete. New task definition registered and service updated."
