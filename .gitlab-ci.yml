@@ -36,10 +36,10 @@ build_image:
   script:
     - echo "Building Docker image ..."
     # Build the image with two tags (latest + commit SHA)
-    - docker build -f ubi-container-pipeline/Dockerfile -t $ECR_REPO_NAME:$IMAGE_TAG_LATEST -t $ECR_REPO_NAME:$IMAGE_TAG_SHA ubi-container-pipeline/
-    # Tag the images for ECR path so that they can be pushed to the ECR repository
-    - docker tag $ECR_REPO_NAME:$IMAGE_TAG_LATEST $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO_NAME:$IMAGE_TAG_LATEST
-    - docker tag $ECR_REPO_NAME:$IMAGE_TAG_SHA $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO_NAME:$IMAGE_TAG_SHA
+    - docker build -f ubi-container-pipeline/Dockerfile \
+     -t $ECR_URI:$IMAGE_TAG_LATEST \
+     -t $ECR_URI:$IMAGE_TAG_SHA \
+     ubi-container-pipeline/
   artifacts:
     # Optionally save a tar version of the image (debugging, local load)
     paths:
