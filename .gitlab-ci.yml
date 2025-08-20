@@ -70,3 +70,4 @@ deploy_image:
     - aws ecs update-service --cluster $ECS_CLUSTER_NAME --service $ECS_SERVICE_NAME --force-new-deployment
 
     - echo "Deployment complete. New task definition registered and service updated."
+ 
