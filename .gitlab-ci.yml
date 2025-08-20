@@ -36,10 +36,7 @@ build_image:
   script:
     - echo "Building Docker image ..."
     # Build the image with two tags (latest + commit SHA)
-    - docker build -f ubi-container-pipeline/Dockerfile \
-     -t $ECR_URI:$IMAGE_TAG_LATEST \
-     -t $ECR_URI:$IMAGE_TAG_SHA \
-     ubi-container-pipeline/
+    - docker build -f ubi-container-pipeline/Dockerfile -t $ECR_URI:$IMAGE_TAG_LATEST -t $ECR_URI:$IMAGE_TAG_SHA ubi-container-pipeline/
   artifacts:
     # Optionally save a tar version of the image (debugging, local load)
     paths:
