@@ -16,8 +16,7 @@ variables:
 
 # Define the stages of the pipeline
 stages:
-  - build    # => This will build the UBI-9 + Flask image
-  - push     # => This will push the UBI-9 + Flask image to ECR
+  - build & push  # => This will build the UBI-9 + Flask image & push the image to ECR
   - deploy   # => This will deploy the UBI-9 + Flask image by updating the ECS service to use the new image
 
 # This section will run before each job
@@ -31,27 +30,18 @@ before_script:
   - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_URI
 
 # Stage 1 | Build the UBI-9 + Flask image
-build_image:
+build_and_push_image:
   stage: build
   script:
     - echo "Building Docker image ..."
     # Build the image with two tags (latest + commit SHA)
     - docker build -f ubi-container-pipeline/Dockerfile -t $ECR_URI:$IMAGE_TAG_LATEST -t $ECR_URI:$IMAGE_TAG_SHA ubi-container-pipeline/
-  artifacts:
-    # Optionally save a tar version of the image (debugging, local load)
-    paths:
-      - docker-image.tar
-    expire_in: 1 hour
-
-# Stage 2 | Push the UBI-9 + Flask image to ECR
-push_image:
-  stage: push
-  script:
+    # Pushing the UBI-9 + Flask image to ECR
     - echo "Pushing Docker image to ECR..."
     - docker push $ECR_URI:$IMAGE_TAG_LATEST
     - docker push $ECR_URI:$IMAGE_TAG_SHA
 
-# Stage 3 | Deploy the UBI-9 + Flask image to ECS
+# Stage 2 | Deploy the UBI-9 + Flask image to ECS
 deploy_image:
   stage: deploy
   script:
