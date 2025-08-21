@@ -52,7 +52,7 @@ deploy_image:
     # Get current task definition JSON, replace image, and register new revision
     - NEW_TASK_DEF=$(aws ecs describe-task-definition --task-definition $TASK_DEF --region $AWS_REGION)
     - echo $NEW_TASK_DEF | jq --arg IMAGE "$ECR_URI:$IMAGE_TAG_LATEST" '.taskDefinition | .containerDefinitions[0].image=$IMAGE | {family, containerDefinitions}' > new-task-def.json
-    - aws ecs register-task-definition --cli-input-json file://new-task-def.json
+    - aws ecs register-task-definition --cli-input-json file://new-task-def.json --region $AWS_REGION
     # Update service to use new revision
     - aws ecs update-service --cluster $ECS_CLUSTER_NAME --service $ECS_SERVICE_NAME --force-new-deployment
 
