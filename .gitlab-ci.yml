@@ -16,7 +16,7 @@ variables:
 
 # Define the stages of the pipeline
 stages:
-  - build & push  # => This will build the UBI-9 + Flask image & push the image to ECR
+  - build    # => This will build the UBI-9 + Flask image & push the image to ECR
   - deploy   # => This will deploy the UBI-9 + Flask image by updating the ECS service to use the new image
 
 # This section will run before each job
@@ -30,7 +30,7 @@ before_script:
   - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_URI
 
 # Stage 1 | Build the UBI-9 + Flask image
-build_and_push_image:
+build_image:
   stage: build
   script:
     - echo "Building Docker image ..."
