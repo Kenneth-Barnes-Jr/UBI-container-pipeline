@@ -3,6 +3,7 @@
 
 ## 🏗️**Techinal Architecture**
 
+![Image](https://github.com/user-attachments/assets/6a354225-e5a8-4fba-9fba-3dc8c481f4ed)
 
 1. **Code Commit & Push**
     - Developer pushes code to GitLab.
